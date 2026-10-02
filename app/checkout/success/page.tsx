@@ -15,5 +15,5 @@ export default async function CheckoutSuccess({ searchParams }: { searchParams: 
   if (rows.length === 0) return notFound();
   const order = rows[0] as { id: string; total: string; currency: string; customer_email: string };
 
-  return <main className="checkout-page"><div className="checkout-success"><p className="eyebrow">ORDER CONFIRMED</p><h1>Thank you for your order.</h1><p>Order <strong>#{order.id.slice(0, 8)}</strong> was created successfully.</p><p>Total: <strong>{order.currency} {Number(order.total).toFixed(2)}</strong></p><p>We&apos;ll send confirmation to {order.customer_email}.</p><Link className="checkout-primary inline-button" href="/">Continue shopping</Link></div></main>;
+  return <main className="checkout-page"><div className="checkout-success"><p className="eyebrow">ORDER CONFIRMED</p><h1>Thank you for your order.</h1><p>Order <strong>#{order.id.slice(0, 8)}</strong> was created successfully.</p><p>Total: <strong>{order.currency} {Number(order.total).toFixed(2)}</strong></p><p>Your order is recorded for {order.customer_email}. Email confirmation will be added with the Mailgun integration.</p><Link className="checkout-primary inline-button" href="/">Continue shopping</Link></div></main>;
 }
