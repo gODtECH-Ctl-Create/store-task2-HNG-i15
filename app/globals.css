@@ -46,6 +46,39 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 .brand span { font-weight: 400; }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-link {
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.auth-link:hover { text-decoration: underline; }
+
+.auth-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-signout {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.auth-loading {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .cart-trigger {
   border: 1px solid var(--ink);
   background: transparent;
@@ -305,6 +338,20 @@ main {
   border: 1px solid var(--ink);
   background: transparent;
   padding: 10px 14px;
+}
+
+.auth-page {
+  width: min(520px, calc(100% - 28px));
+  min-height: calc(100vh - 80px);
+  margin: 0 auto;
+  padding: 72px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-page > * {
+  width: 100%;
 }
 
 @media (max-width: 900px) {
