@@ -63,7 +63,7 @@ export default function CheckoutForm({ email, items }: { email: string; items: I
         {items.map((item) => <div className="summary-item" key={item.product_id}><span>{item.name} × {item.quantity}</span><strong>USD {(item.price * item.quantity).toFixed(2)}</strong></div>)}
         <div className="summary-total"><span>Subtotal</span><strong>USD {subtotal.toFixed(2)}</strong></div>
         <p className="summary-note">Shipping is currently free.</p>
-        <p className="summary-email">Confirmation will be sent to {email}.</p>
+        <p className="summary-email">Order details will be recorded for {email}. Email delivery is handled separately.</p>
       </aside>
     </div>
   );
