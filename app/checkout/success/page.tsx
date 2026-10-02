@@ -1,0 +1,19 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { auth } from "@/lib/auth/server";
+import { sql } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+export default async function CheckoutSuccess({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
+  const { data: session } = await auth.getSession();
+  if (!session?.user) return notFound();
+  const params = await searchParams;
+  if (!params.order) return notFound();
+
+  const rows = await sql`SELECT id, total::text, currency, customer_email FROM orders WHERE id = ${params.order} AND user_id = ${session.user.id} LIMIT 1`;
+  if (rows.length === 0) return notFound();
+  const order = rows[0] as { id: string; total: string; currency: string; customer_email: string };
+
+  return <main className="checkout-page"><div className="checkout-success"><p className="eyebrow">ORDER CONFIRMED</p><h1>Thank you for your order.</h1><p>Order <strong>#{order.id.slice(0, 8)}</strong> was created successfully.</p><p>Total: <strong>{order.currency} {Number(order.total).toFixed(2)}</strong></p><p>We&apos;ll send confirmation to {order.customer_email}.</p><Link className="checkout-primary inline-button" href="/">Continue shopping</Link></div></main>;
+}
