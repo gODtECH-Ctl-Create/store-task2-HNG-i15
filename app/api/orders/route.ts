@@ -21,9 +21,63 @@ export async function POST(request: Request) {
     return Response.json({ error: "Please provide valid shipping details." }, { status: 400 });
   }
 
-  const rows = await sql`INSERT INTO orders (user_id, status, subtotal, shipping, total, currency, customer_email, shipping_name, shipping_address, shipping_city, shipping_state, shipping_postal_code, shipping_country) SELECT c.user_id, 'confirmed', SUM(p.price * ci.quantity), 0, SUM(p.price * ci.quantity), 'USD', ${session.user.email}, ${name}, ${address}, ${city}, ${state}, ${postalCode}, ${country} FROM carts c JOIN cart_items ci ON ci.cart_id = c.id JOIN products p ON p.id = ci.product_id WHERE c.user_id = ${session.user.id} AND c.status = 'open' AND p.active = true AND p.stock >= ci.quantity GROUP BY c.id, c.user_id HAVING COUNT(*) = (SELECT COUNT(*) FROM cart_items all_items WHERE all_items.cart_id = c.id) RETURNING id, total::text, currency`;
+  const rows = await sql`
+    WITH cart AS (
+      SELECT id AS cart_id, user_id
+      FROM carts
+      WHERE user_id = ${session.user.id} AND status = 'open'
+      ORDER BY created_at DESC
+      LIMIT 1
+    ),
+    lines AS (
+      SELECT c.cart_id, ci.product_id, ci.quantity, p.name, p.price, p.stock, p.active
+      FROM cart c
+      JOIN cart_items ci ON ci.cart_id = c.cart_id
+      JOIN products p ON p.id = ci.product_id
+      WHERE p.active = true
+      FOR UPDATE OF p
+    ),
+    valid AS (
+      SELECT c.cart_id, c.user_id, SUM(l.price * l.quantity) AS subtotal
+      FROM cart c
+      JOIN lines l ON l.cart_id = c.cart_id
+      WHERE l.active = true AND l.stock >= l.quantity
+      GROUP BY c.cart_id, c.user_id
+      HAVING COUNT(*) = (SELECT COUNT(*) FROM cart_items ci WHERE ci.cart_id = c.cart_id)
+    ),
+    new_order AS (
+      INSERT INTO orders (user_id, status, subtotal, shipping, total, currency, customer_email, shipping_name, shipping_address, shipping_city, shipping_state, shipping_postal_code, shipping_country)
+      SELECT user_id, 'confirmed', subtotal, 0, subtotal, 'USD', ${session.user.email}, ${name}, ${address}, ${city}, ${state}, ${postalCode}, ${country}
+      FROM valid
+      RETURNING id, total, currency, user_id, (SELECT cart_id FROM valid LIMIT 1) AS cart_id
+    ),
+    inserted_items AS (
+      INSERT INTO order_items (order_id, product_id, product_name, unit_price, quantity, line_total)
+      SELECT o.id, l.product_id, l.name, l.price, l.quantity, l.price * l.quantity
+      FROM new_order o
+      JOIN lines l ON l.cart_id = o.cart_id
+      RETURNING order_id
+    ),
+    decremented_stock AS (
+      UPDATE products p
+      SET stock = p.stock - l.quantity, updated_at = NOW()
+      FROM new_order o
+      JOIN lines l ON l.cart_id = o.cart_id
+      WHERE p.id = l.product_id
+      RETURNING p.id
+    ),
+    converted_cart AS (
+      UPDATE carts c
+      SET status = 'converted', updated_at = NOW()
+      FROM new_order o
+      WHERE c.id = o.cart_id
+      RETURNING c.id
+    )
+    SELECT id, total::text, currency FROM new_order
+  `;
 
-  if (rows.length === 0) return Response.json({ error: "Your cart is empty or an item is unavailable." }, { status: 409 });
+  if (rows.length === 0) return Response.json({ error: "Your cart is empty or an item is no longer available." }, { status: 409 });
+
   const order = rows[0] as { id: string; total: string; currency: string };
   return Response.json({ id: order.id, total: Number(order.total), currency: order.currency }, { status: 201 });
 }
