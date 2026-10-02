@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   ), item AS (
     INSERT INTO cart_items (cart_id, product_id, quantity)
     SELECT cart.id, product.id, LEAST(${quantity}, product.stock) FROM cart CROSS JOIN product
-    ON CONFLICT (cart_id, product_id) DO UPDATE SET quantity = LEAST(cart_items.quantity + EXCLUDED.quantity, product.stock), updated_at = NOW()
+    ON CONFLICT (cart_id, product_id) DO UPDATE SET quantity = LEAST(cart_items.quantity + EXCLUDED.quantity, (SELECT stock FROM products p WHERE p.id = EXCLUDED.product_id)), updated_at = NOW()
     RETURNING product_id, quantity
   )
   SELECT item.product_id, item.quantity, p.name, p.description, p.price::text, p.currency, p.image_url, p.stock
