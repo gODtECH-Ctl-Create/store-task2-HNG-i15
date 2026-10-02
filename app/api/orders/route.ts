@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth/server";
 import { sql } from "@/lib/db";
+import { sendOrderConfirmation } from "@/lib/mailgun";
 
 type CheckoutBody = { name?: string; address?: string; city?: string; state?: string; postalCode?: string; country?: string };
 
@@ -79,5 +80,35 @@ export async function POST(request: Request) {
   if (rows.length === 0) return Response.json({ error: "Your cart is empty or an item is no longer available." }, { status: 409 });
 
   const order = rows[0] as { id: string; total: string; currency: string };
-  return Response.json({ id: order.id, total: Number(order.total), currency: order.currency }, { status: 201 });
+  const emailItems = await sql`
+    SELECT product_name AS name, quantity, unit_price::text, line_total::text
+    FROM order_items
+    WHERE order_id = ${order.id}
+    ORDER BY created_at ASC
+  `;
+
+  let emailSent = false;
+
+  try {
+    const result = await sendOrderConfirmation({
+      to: session.user.email,
+      orderId: order.id,
+      total: Number(order.total),
+      currency: order.currency,
+      shippingName: name,
+      items: emailItems.map((item) => ({
+        name: String(item.name),
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unit_price),
+        lineTotal: Number(item.line_total),
+      })),
+    });
+
+    await sql`UPDATE orders SET mailgun_sent_at = NOW(), updated_at = NOW() WHERE id = ${order.id} AND user_id = ${session.user.id}`;
+    emailSent = true;
+    return Response.json({ id: order.id, total: Number(order.total), currency: order.currency, emailSent, messageId: result.id ?? null }, { status: 201 });
+  } catch (error) {
+    console.error("Order confirmation email failed", error);
+    return Response.json({ id: order.id, total: Number(order.total), currency: order.currency, emailSent: false }, { status: 201 });
+  }
 }
