@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import "@neondatabase/auth-ui/css";
 import "./globals.css";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Store",
-  description: "A simple modern online shop",
+  title: "Nova Store",
+  description: "Curated everyday goods, powered by Neon.",
 };
 
 export default function RootLayout({
@@ -13,7 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
