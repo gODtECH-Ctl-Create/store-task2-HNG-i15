@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AuthControls } from "@/components/auth-controls";
 
 type Product = {
   id: string;
@@ -59,9 +60,12 @@ export default function Storefront({ products }: { products: Product[] }) {
     <div className="store-shell">
       <header className="site-header">
         <a className="brand" href="/">NOVA<span>STORE</span></a>
-        <button className="cart-trigger" type="button" onClick={() => setCartOpen(true)}>
-          Cart <span>{cartCount}</span>
-        </button>
+        <div className="header-actions">
+          <AuthControls />
+          <button className="cart-trigger" type="button" onClick={() => setCartOpen(true)}>
+            Cart <span>{cartCount}</span>
+          </button>
+        </div>
       </header>
 
       <main>
